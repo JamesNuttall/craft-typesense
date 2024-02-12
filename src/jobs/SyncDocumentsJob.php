@@ -11,7 +11,9 @@
 namespace percipiolondon\typesense\jobs;
 
 use Craft;
-use craft\queue\BaseJob;
+use craft\base\Batchable;
+use craft\db\QueryBatcher;
+use craft\queue\BaseBatchedJob;
 
 use percipiolondon\typesense\helpers\CollectionHelper;
 use percipiolondon\typesense\Typesense;
@@ -34,90 +36,83 @@ use percipiolondon\typesense\Typesense;
  * @package   Typesense
  * @since     1.0.0
  */
-class SyncDocumentsJob extends BaseJob
+class SyncDocumentsJob extends BaseBatchedJob
 {
     // Public Properties
     // =========================================================================
-
-    /**
-     * @var array
-     */
     public array $criteria = [];
-
-    // Public Methods
-    // =========================================================================
+    public int $batchIndex = 0;
+    public int $batchSize = 2500;
+    private $collection;
+    private $client;
 
     public function execute($queue): void
     {
-        $upsertIds = [];
-        $collection = CollectionHelper::getCollection($this->criteria['index']);
-        $collectionTypesense = Typesense::$plugin->getCollections()->getCollectionByCollectionRetrieve($this->criteria['index']);
-        $client = Typesense::$plugin->getClient()->client();
-
-        if ($client !== false && !is_null($collection)) {
-
-            // delete collections if the action is flush
-            if ($collectionTypesense !== [] && $this->criteria['type'] === 'Flush') {
-                Typesense::$plugin->client->client()?->collections[$this->criteria['index']]->delete();
-                $collectionTypesense = null;
-            }
-
-            //create a new schema if a collection has been flushed
-            if (!$collectionTypesense) {
-                $collectionTypesense = $client->collections->create($collection->schema);
-            }
-
-            if ($collectionTypesense !== []) {
-                $entries = $collection->criteria->all();
-                $totalEntries = count($entries);
-
-                //fetch each document of entry to update
-                foreach ($entries as $i => $entry) {
-
-                    $resolver = $collection->schema['resolver']($entry);
-
-                    if ($resolver) {
-                        $doc = $client->collections[$this->criteria['index']]
-                            ->documents
-                            ->upsert($resolver);
-
-                        $upsertIds[] = $doc['id'];
-                    }
-
-                    $this->setProgress(
-                        $queue,
-                        $i / $totalEntries,
-                        \Craft::t('app', '{step, number} of {total, number}', [
-                            'step' => $i + 1,
-                            'total' => $totalEntries,
-                        ])
-                    );
-                }
-
-
-                // convert documents into an array
-                $documents = CollectionHelper::convertDocumentsToArray($this->criteria['index']);
-
-                // delete documents that aren't existing anymore
-                foreach ($documents as $document) {
-                    if (isset($document['id']) && !in_array($document['id'], $upsertIds)) {
-                        $client->collections[$this->criteria['index']]->documents->delete(['filter_by' => 'id: ' . $document['id']]);
-                    }
-                }
-            }
+        $this->client = Typesense::$plugin->getClient()->client();
+        if (!$this->client) {
+            throw new \Exception('Typesense client not found');
         }
+
+        $this->collection = CollectionHelper::getCollection($this->criteria['index']);
+        if (is_null($this->collection)) {
+            throw new \Exception('Collection not found');
+        }
+
+        $typesenseCollection = Typesense::$plugin->getCollections()->getCollectionByCollectionRetrieve($this->criteria['index']);
+
+        if ($this->criteria['type'] === 'Flush') {
+            $typesenseCollection = $this->flushCollection($typesenseCollection);
+            // To avoid reflushing the collection when handle subsequent batched syncs we override the type
+            $this->criteria['type'] = 'Sync';
+        }
+
+        if (!$typesenseCollection) {
+            $typesenseCollection = $this->client->collections->create($this->collection->schema);
+        }
+
+        if (!$typesenseCollection) {
+            throw new \Exception('Collection not found.');
+        }
+
+        parent::execute($queue);
     }
 
     // Protected Methods
     // =========================================================================
+    protected function loadData(): Batchable
+    {
+        $collection = CollectionHelper::getCollection($this->criteria['index']);
+        return new QueryBatcher($collection->criteria);
+    }
 
-    /**
-     * Returns a default description for [[getDescription()]], if [[description]] isn’t set.
-     *
-     * @return string The default task description
-     */
+    protected function processItem(mixed $item): void
+    {
+        $resolver = $this->collection->schema['resolver']($item);
+
+        if ($resolver) {
+            $this->client
+                ->collections[$this->criteria['index']]
+                ->documents
+                ->upsert($resolver);
+
+/*             $upsertIds[] = $doc['id'];  // maybe some type of garabage collection that runs after sync (not flush&sync) */
+        }
+    }
+
     protected function defaultDescription(): string
     {
-        return Craft::t('typesense', ($this->criteria['type'] ?? 'Unkown') . ' documents for ' . $this->criteria['index']);
+        $indexName = $this->criteria['index'];
+        return Craft::t('typesense', "[$indexName] Syncing documents");
+    }
+
+    // Private Methods
+    // =========================================================================
+    private function flushCollection($collectionTypesense)
+    {
+        if ($collectionTypesense !== []) {
+            $this->client?->collections[$this->criteria['index']]->delete();
+        }
+
+        return;
     }
 }
