@@ -94,15 +94,13 @@ class SyncDocumentsJob extends BaseBatchedJob
                 ->collections[$this->criteria['index']]
                 ->documents
                 ->upsert($resolver);
-
-/*             $upsertIds[] = $doc['id'];  // maybe some type of garabage collection that runs after sync (not flush&sync) */
         }
     }
 
     protected function defaultDescription(): string
     {
         $indexName = $this->criteria['index'];
-        return Craft::t('typesense', "[$indexName] Syncing documents");
+        return Craft::t('app', "[{indexName}] Syncing documents", [ 'indexName' => $indexName ]);
     }
 
     // Private Methods
