@@ -42,9 +42,10 @@ class SyncDocumentsJob extends BaseBatchedJob
     // =========================================================================
     public array $criteria = [];
     public int $batchIndex = 0;
-    public int $batchSize = 2500;
+    public int $batchSize = 10000;
     private $collection;
     private $client;
+    private $transformed = [];
 
     public function execute($queue): void
     {
@@ -75,6 +76,8 @@ class SyncDocumentsJob extends BaseBatchedJob
         }
 
         parent::execute($queue);
+
+        $this->client->collections[$this->criteria['index']]->documents->import($this->transformed, ['action' => 'create']);
     }
 
     // Protected Methods
@@ -90,10 +93,7 @@ class SyncDocumentsJob extends BaseBatchedJob
         $resolver = $this->collection->schema['resolver']($item);
 
         if ($resolver) {
-            $this->client
-                ->collections[$this->criteria['index']]
-                ->documents
-                ->upsert($resolver);
+            $this->transformed[] = $resolver;
         }
     }
 
