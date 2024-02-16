@@ -42,7 +42,7 @@ class SyncDocumentsJob extends BaseBatchedJob
     // =========================================================================
     public array $criteria = [];
     public int $batchIndex = 0;
-    public int $batchSize = 10000;
+    public int $batchSize = 5000;
     private $collection;
     private $client;
     private $transformed = [];
