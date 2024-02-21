@@ -361,7 +361,7 @@ class Typesense extends Plugin
                     $type = $entry->type->handle ?? null;
                     $collection = null;
 
-                    if (ElementHelper::isDraftOrRevision($entry)) {
+                    if (ElementHelper::isDraftOrRevision($entry) || $entry->resaving) {
                         // don’t do anything with drafts or revisions
                         return;
                     }
