@@ -54,21 +54,25 @@ class SyncDocumentsJob extends BaseBatchedJob
             throw new \Exception('Typesense client not found');
         }
 
-        $this->collection = CollectionHelper::getCollection($this->criteria['index']);
+        if ($this->criteria['type'] === 'Flush') {
+            $this->criteria['alias'] = $this->criteria['index'];
+            $this->criteria['index'] = $this->criteria['index'] . '_' . time();
+        }
+
+        $this->collection = CollectionHelper::getCollection($this->criteria['alias']);
         if (is_null($this->collection)) {
             throw new \Exception('Collection not found');
         }
 
         $typesenseCollection = Typesense::$plugin->getCollections()->getCollectionByCollectionRetrieve($this->criteria['index']);
-
         if ($this->criteria['type'] === 'Flush') {
             $typesenseCollection = $this->flushCollection($typesenseCollection);
-            // To avoid reflushing the collection when handle subsequent batched syncs we override the type
             $this->criteria['type'] = 'Sync';
-        }
 
-        if (!$typesenseCollection) {
-            $typesenseCollection = $this->client->collections->create($this->collection->schema);
+            if (!$typesenseCollection) {
+                $this->collection->schema['name'] = $this->criteria['index'];
+                $typesenseCollection = $this->client->collections->create($this->collection->schema);
+            }
         }
 
         if (!$typesenseCollection) {
@@ -78,13 +82,27 @@ class SyncDocumentsJob extends BaseBatchedJob
         parent::execute($queue);
 
         $this->client->collections[$this->criteria['index']]->documents->import($this->transformed, ['action' => 'create']);
+
+        if ($this->batchIndex == $this->totalBatches() - 1) {
+            $aliases = $this->client->aliases->retrieve()['aliases'];
+
+            $oldAlias = array_filter($aliases, function($alias) {
+                return $alias['name'] === $this->criteria['alias'];
+            });
+
+            $oldAlias = array_shift($oldAlias);
+            $this->client->aliases->upsert($this->criteria['alias'], ['collection_name' => $this->criteria['index']]);
+            if ($oldAlias) {
+                $this->client->collections[$oldAlias['collection_name']]->delete();
+            }
+        }
     }
 
     // Protected Methods
     // =========================================================================
     protected function loadData(): Batchable
     {
-        $collection = CollectionHelper::getCollection($this->criteria['index']);
+        $collection = CollectionHelper::getCollection($this->criteria['alias'] ?? $this->criteria['index']);
         return new QueryBatcher($collection->criteria);
     }
 
@@ -99,7 +117,7 @@ class SyncDocumentsJob extends BaseBatchedJob
 
     protected function defaultDescription(): string
     {
-        $indexName = $this->criteria['index'];
+        $indexName = $this->criteria['alias'] ?? $this->criteria['index'];
         return Craft::t('app', "[{indexName}] Syncing documents", [ 'indexName' => $indexName ]);
     }
 
