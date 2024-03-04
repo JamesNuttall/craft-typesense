@@ -39,6 +39,9 @@ class CollectionHelper
 
         foreach ($indexes as $index) {
             if ($index->section === $name) {
+                $alias = Typesense::$plugin->getClient()->client()->aliases[$index->indexName]->retrieve()['collection_name'];
+                if (!$alias) continue;
+                $index->indexName = $alias;
                 return $index;
             }
         }

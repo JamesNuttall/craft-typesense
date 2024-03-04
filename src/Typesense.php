@@ -395,7 +395,8 @@ class Typesense extends Plugin
                                 $resolver = $collection->schema['resolver']($entry);
 
                                 if ($resolver) {
-                                    self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->upsert($resolver);
+                                    $collectionAlias = self::$plugin->getClient()->client()->aliases[$collection->indexName]->retrieve();
+                                    self::$plugin->getClient()->client()->collections[$collectionAlias['collection_name']]->documents->upsert($resolver);
                                 }
                             } catch (ObjectNotFound | ServerError $e) {
                                 Craft::$app->session->setFlash('error', Craft::t('typesense', 'There was an issue saving your action, check the logs for more info'));
