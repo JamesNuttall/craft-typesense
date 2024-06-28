@@ -104,6 +104,7 @@ class SettingsController extends Controller
         }
 
         $settings = [
+            'indexingEnabled' => Craft::$app->getRequest()->getBodyParam('indexingEnabled'),
             'apiKey' => Craft::$app->getRequest()->getBodyParam('apiKey'),
             'cluster' => Craft::$app->getRequest()->getBodyParam('cluster'),
             'clusterPort' => Craft::$app->getRequest()->getBodyParam('clusterPort'),

@@ -28,6 +28,15 @@
 
     {{- redirectInput('typesense/plugin') -}}
 
+    {{ forms.booleanMenuField({
+        label: 'Enable Typesense'|t('typesense'),
+        instructions: 'Enable or disable the Typesense indexing.'|t('typesense'),
+        name: 'indexingEnabled',
+        includeEnvVars: true,
+        required: true,
+        value: settings.indexingEnabled,
+    }) }}
+
     {{ forms.selectField({
         label: 'Typesense Server Type'|t('blitz'),
         instructions: 'The server type for connecting to the Typesense API.'|t('typesense'),

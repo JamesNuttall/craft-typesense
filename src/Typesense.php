@@ -19,6 +19,7 @@ use craft\events\ElementEvent;
 use craft\events\RegisterUrlRulesEvent;
 use craft\events\RegisterUserPermissionsEvent;
 use craft\helpers\ElementHelper;
+use craft\helpers\App;
 use craft\helpers\UrlHelper;
 use craft\services\Elements;
 use craft\services\UserPermissions;
@@ -123,7 +124,12 @@ class Typesense extends Plugin
 
         $this->_registerComponents();
         $this->installEventListeners();
-        $this->_registerEventHandlers();
+
+
+        if (App::parseEnv($this->settings->indexingEnabled)) {
+            $this->_registerEventHandlers();
+        }
+
         $this->_registerVariable();
 
         // Add in our console commands

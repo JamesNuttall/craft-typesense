@@ -49,6 +49,8 @@ class Settings extends Model
      */
     public string $pluginName = 'Typesense';
 
+    public ?string $indexingEnabled = null;
+
     /**
      * @var string which type of Typesense connection needs to be used.
      *
@@ -114,7 +116,7 @@ class Settings extends Model
         return [
             'parser' => [
                 'class' => EnvAttributeParserBehavior::class,
-                'attributes' => ['apiKey', 'cluster', 'nearestNode', 'clusterPort', 'port', 'protocol', 'searchOnlyApiKey', 'server'],
+                'attributes' => ['indexingEnabled', 'apiKey', 'cluster', 'nearestNode', 'clusterPort', 'port', 'protocol', 'searchOnlyApiKey', 'server'],
             ],
         ];
     }
