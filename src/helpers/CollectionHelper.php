@@ -33,17 +33,18 @@ class CollectionHelper
         return null;
     }
 
-    public static function getCollectionBySection(string $name): ?TypesenseCollectionIndex
+    public static function getCollectionBySection(string $name): ?array
     {
         $indexes = Typesense::$plugin->getSettings()->collections;
+        $filteredIndexes = [];
 
         foreach ($indexes as $index) {
             if ($index->section === $name || (is_array($index->section) && in_array($name, $index->section))) {
-                return $index;
+                $filteredIndexes[] = $index;
             }
         }
 
-        return null;
+        return count($filteredIndexes) ? $filteredIndexes : null;
     }
 
     public static function convertDocumentsToArray(string $index): array

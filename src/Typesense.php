@@ -377,41 +377,43 @@ class Typesense extends Plugin
                             $section = $sectionHande . '.' . $type;
                         }
 
-                        $collection = CollectionHelper::getCollectionBySection($section);
+                        $collections = CollectionHelper::getCollectionBySection($section);
 
                         // get the generic type if specific doesn't exist
-                        if (is_null($collection)) {
+                        if (is_null($collections)) {
                             $section = $sectionHande . '.all';
-                            $collection = CollectionHelper::getCollectionBySection($section);
+                            $collections = CollectionHelper::getCollectionBySection($section);
                         }
 
                         //create collection if it doesn't exist
-                        if (!$collection instanceof \percipiolondon\typesense\TypesenseCollectionIndex) {
+                        if (count($collections) == 0) {
                             self::$plugin->getCollections()->saveCollections();
-                            $collection = CollectionHelper::getCollectionBySection($section);
+                            $collections = CollectionHelper::getCollectionBySection($section);
                         }
                     }
 
-                    if (($entry->enabled && $entry->getEnabledForSite()) && $entry->getStatus() === 'live') {
-                        // element is enabled --> save to Typesense
-                        if ($collection !== null) {
-                            Craft::info('Typesense edit / add / delete document based of: ' . $entry->title, __METHOD__);
+                    foreach ($collections as $collection) {
+                        if (($entry->enabled && $entry->getEnabledForSite()) && $entry->getStatus() === 'live') {
+                            // element is enabled --> save to Typesense
+                            if ($collection !== null) {
+                                Craft::info('Typesense edit / add / delete document based of: ' . $entry->title, __METHOD__);
 
-                            try {
-                                $resolver = $collection->schema['resolver']($entry);
+                                try {
+                                    $resolver = $collection->schema['resolver']($entry);
 
-                                if ($resolver) {
-                                    self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->upsert($resolver);
+                                    if ($resolver) {
+                                        self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->upsert($resolver);
+                                    }
+                                } catch (ObjectNotFound | ServerError $e) {
+                                    Craft::$app->session->setFlash('error', Craft::t('typesense', 'There was an issue saving your action, check the logs for more info'));
+                                    Craft::error($e->getMessage(), __METHOD__);
                                 }
-                            } catch (ObjectNotFound | ServerError $e) {
-                                Craft::$app->session->setFlash('error', Craft::t('typesense', 'There was an issue saving your action, check the logs for more info'));
-                                Craft::error($e->getMessage(), __METHOD__);
                             }
-                        }
-                    } else {
-                        // element is disabled --> delete from Typesense
-                        if ($collection !== null) {
-                            self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->delete(['filter_by' => 'id: ' . $id]);
+                        } else {
+                            // element is disabled --> delete from Typesense
+                            if ($collection !== null) {
+                                self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->delete(['filter_by' => 'id: ' . $id]);
+                            }
                         }
                     }
                 }
@@ -439,17 +441,19 @@ class Typesense extends Plugin
                         $section = $section . '.' . $type;
                     }
 
-                    $collection = CollectionHelper::getCollectionBySection($section);
+                    $collections = CollectionHelper::getCollectionBySection($section);
 
                     //create collection if it doesn't exist
-                    if (!$collection instanceof \percipiolondon\typesense\TypesenseCollectionIndex) {
+                    if (count($collections) == 0) {
                         self::$plugin->getCollections()->saveCollections();
                         $collection = CollectionHelper::getCollectionBySection($section);
                     }
                 }
 
-                if ($collection !== null) {
-                    self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->delete(['filter_by' => 'id: ' . $id]);
+                if (count($collections)) {
+                    foreach ($collections as $collection) {
+                        self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->delete(['filter_by' => 'id: ' . $id]);
+                    }
                 }
             }
         );
