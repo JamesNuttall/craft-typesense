@@ -66,29 +66,31 @@ class DefaultController extends Controller
      *
      * @return mixed
      */
-    public function actionFlush()
+    public function actionFlush(?string $handle = null)
     {
         $indexes = Typesense::$plugin->getSettings()->collections;
 
         foreach ($indexes as $index) {
-            $this->stdout('Flush ' . $index->indexName);
-            $this->stdout(PHP_EOL);
+            if (!$handle || $index->indexName == $handle) {
+                $this->stdout('Flush ' . $index->indexName);
+                $this->stdout(PHP_EOL);
 
-            if ($this->hasEventHandlers(self::EVENT_BEFORE_FLUSH)) {
-                $this->trigger(self::EVENT_BEFORE_FLUSH, new DocumentEvent([
-                    'document' => [
+                if ($this->hasEventHandlers(self::EVENT_BEFORE_FLUSH)) {
+                    $this->trigger(self::EVENT_BEFORE_FLUSH, new DocumentEvent([
+                        'document' => [
+                            'index' => $index->indexName,
+                            'type' => 'Flush',
+                        ]
+                    ]));
+                }
+
+                Queue::push(new SyncDocumentsJob([
+                    'criteria' => [
                         'index' => $index->indexName,
-                        'type' => 'Flush',
+                        'type' => 'Flush'
                     ]
                 ]));
             }
-
-            Queue::push(new SyncDocumentsJob([
-                'criteria' => [
-                    'index' => $index->indexName,
-                    'type' => 'Flush'
-                ]
-            ]));
         }
     }
 

@@ -50,22 +50,10 @@
 <template>
 
     <section class="rounded-tr-sm rounded-tl-sm">
-        <div class="grid grid-cols-5 rounded-tr-md rounded-tl-md bg-gray-100">
+        <div class="grid grid-cols-2 rounded-tr-md rounded-tl-md bg-gray-100">
 
             <div class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Index
-            </div>
-
-            <div class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
-            </div>
-
-            <div class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
-            </div>
-
-            <div class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Results
             </div>
 
             <!--div class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -78,7 +66,7 @@
 
         </div>
 
-        <div class="grid grid-cols-5">
+        <div class="grid grid-cols-2">
 
             <list-item-section
                 v-for="section in sections"

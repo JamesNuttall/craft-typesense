@@ -101,53 +101,10 @@ class CollectionsController extends Controller
         $indexes = Typesense::$plugin->getSettings()->collections;
 
         foreach ($indexes as $index) {
-            $element = $index->criteria->one();
-
-            switch ($index->elementType) {
-                case 'craft\elements\Asset':
-                    $volume = $element->getVolume() ?? null;
-
-                    if ($volume) {
-                        $variables['sections'][] = [
-                            'id' => 1,
-                            'name' => $volume->name,
-                            'handle' => $volume->handle,
-                            'type' => 'Asset: ' . $volume->handle,
-                            'entryCount' => $index->criteria->count(),
-                            'index' => $index->indexName,
-                        ];
-                    }
-                    break;
-
-                case 'craft\elements\Entry':
-                    $section = $element->section ?? null;
-
-                    if ($section) {
-                        $variables['sections'][] = [
-                            'id' => $section->id,
-                            'name' => $section->name,
-                            'handle' => $section->handle,
-                            'type' => 'Entry: ' . $element->type->handle,
-                            'entryCount' => $index->criteria->count(),
-                            'index' => $index->indexName,
-                        ];
-                    }
-                    break;
-            }
-
-            // Craft::dd($element);
-            // $section = $entry->section ?? null;
-
-            // if ($section) {
-            //     $variables['sections'][] = [
-            //         'id' => $section->id,
-            //         'name' => $section->name,
-            //         'handle' => $section->handle,
-            //         'type' => $entry->type->handle,
-            //         'entryCount' => $index->criteria->count(),
-            //         'index' => $index->indexName,
-            //     ];
-            // }
+            $variables['sections'][] = [
+                'entryCount' => 0,
+                'index' => $index->indexName,
+            ];
         }
 
         $variables['csrf'] = [
