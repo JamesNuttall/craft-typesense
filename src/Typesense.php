@@ -392,27 +392,29 @@ class Typesense extends Plugin
                         }
                     }
 
-                    foreach ($collections as $collection) {
-                        if (($entry->enabled && $entry->getEnabledForSite()) && $entry->getStatus() === 'live') {
-                            // element is enabled --> save to Typesense
-                            if ($collection !== null) {
-                                Craft::info('Typesense edit / add / delete document based of: ' . $entry->title, __METHOD__);
+                    if ($collections) {
+                        foreach ($collections as $collection) {
+                            if (($entry->enabled && $entry->getEnabledForSite()) && $entry->getStatus() === 'live') {
+                                // element is enabled --> save to Typesense
+                                if ($collection !== null) {
+                                    Craft::info('Typesense edit / add / delete document based of: ' . $entry->title, __METHOD__);
 
-                                try {
-                                    $resolver = $collection->schema['resolver']($entry);
+                                    try {
+                                        $resolver = $collection->schema['resolver']($entry);
 
-                                    if ($resolver) {
-                                        self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->upsert($resolver);
+                                        if ($resolver) {
+                                            self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->upsert($resolver);
+                                        }
+                                    } catch (ObjectNotFound | ServerError $e) {
+                                        Craft::$app->session->setFlash('error', Craft::t('typesense', 'There was an issue saving your action, check the logs for more info'));
+                                        Craft::error($e->getMessage(), __METHOD__);
                                     }
-                                } catch (ObjectNotFound | ServerError $e) {
-                                    Craft::$app->session->setFlash('error', Craft::t('typesense', 'There was an issue saving your action, check the logs for more info'));
-                                    Craft::error($e->getMessage(), __METHOD__);
                                 }
-                            }
-                        } else {
-                            // element is disabled --> delete from Typesense
-                            if ($collection !== null) {
-                                self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->delete(['filter_by' => 'id: ' . $id]);
+                            } else {
+                                // element is disabled --> delete from Typesense
+                                if ($collection !== null) {
+                                    self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->delete(['filter_by' => 'id: ' . $id]);
+                                }
                             }
                         }
                     }
