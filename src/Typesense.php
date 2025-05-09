@@ -386,7 +386,7 @@ class Typesense extends Plugin
                         }
 
                         //create collection if it doesn't exist
-                        if (count($collections) == 0) {
+                        if (is_null($collections) || count($collections) == 0) {
                             self::$plugin->getCollections()->saveCollections();
                             $collections = CollectionHelper::getCollectionBySection($section);
                         }
@@ -444,7 +444,7 @@ class Typesense extends Plugin
                     $collections = CollectionHelper::getCollectionBySection($section);
 
                     //create collection if it doesn't exist
-                    if (count($collections) == 0) {
+                    if (is_null($collections) || count($collections) == 0) {
                         self::$plugin->getCollections()->saveCollections();
                         $collection = CollectionHelper::getCollectionBySection($section);
                     }
