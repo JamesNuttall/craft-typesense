@@ -452,7 +452,7 @@ class Typesense extends Plugin
                     }
                 }
 
-                if (count($collections)) {
+                if (!is_null($collections) && count($collections)) {
                     foreach ($collections as $collection) {
                         self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->delete(['filter_by' => 'id: ' . $id]);
                     }
