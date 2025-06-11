@@ -366,6 +366,7 @@ class Typesense extends Plugin
                     $sectionHande = $entry->section->handle ?? null;
                     $type = $entry->type->handle ?? null;
                     $collection = null;
+                    $collections = null;
 
                     if (ElementHelper::isDraftOrRevision($entry) || $entry->resaving) {
                         // don’t do anything with drafts or revisions
@@ -432,6 +433,7 @@ class Typesense extends Plugin
                 $id = $entry->id;
                 $type = $entry->type->handle ?? null;
                 $collection = null;
+                $collections = null;
 
                 if (ElementHelper::isDraftOrRevision($entry)) {
                     // don’t do anything with drafts or revisions
