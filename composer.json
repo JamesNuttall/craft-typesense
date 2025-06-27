@@ -28,7 +28,7 @@
         "craftcms/cms": "^4.0.0",
         "illuminate/collections": "^9.10.0",
         "nystudio107/craft-plugin-vite": "^4.0.0",
-        "typesense/typesense-php": "^5.1.0",
+        "typesense/typesense-php": "^4.7.0",
         "php-http/guzzle7-adapter": "^1.0.0"
     },
     "require-dev": {
