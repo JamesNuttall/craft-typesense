@@ -490,12 +490,30 @@ class Typesense extends Plugin
     private function _cleanupDocumentFromOtherCollections(int $documentId, string $sectionHandle, array $upsertedCollections): void
     {
         // Get all collections and filter by section handle
-        $allCollections = self::$plugin->getCollections()->getAllCollections();
+        $allCollections = Typesense::$plugin->getSettings()->collections;
 
         if ($allCollections) {
             foreach ($allCollections as $collection) {
                 // Check if this collection belongs to the same section
-                if (isset($collection->section) && str_starts_with($collection->section, $sectionHandle . '.')) {
+                $belongsToSection = false;
+
+                if (isset($collection->section)) {
+                    $sections = $collection->section;
+
+                    // Handle both string and array cases
+                    if (is_string($sections)) {
+                        $belongsToSection = str_starts_with($sections, $sectionHandle . '.');
+                    } elseif (is_array($sections)) {
+                        foreach ($sections as $section) {
+                            if (str_starts_with($section, $sectionHandle . '.')) {
+                                $belongsToSection = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if ($belongsToSection) {
                     // Skip collections that we just upserted to
                     if (!in_array($collection->indexName, $upsertedCollections)) {
                         try {
