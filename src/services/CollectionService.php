@@ -22,6 +22,11 @@ class CollectionService extends Component
      */
     public const CONFIG_COLLECTIONS_KEY = 'collections';
 
+    public function getAllCollections(): ?array
+    {
+        return Typesense::$plugin->getClient()->client()->collections->retrieve();
+    }
+
     public function getCollectionByCollectionRetrieve(string $indexName): ?array
     {
         $collections = Typesense::$plugin->getClient()->client()->collections->retrieve();
