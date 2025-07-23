@@ -363,7 +363,7 @@ class Typesense extends Plugin
 
                     $entry = $event->element;
                     $id = $entry->id;
-                    $sectionHande = $entry->section->handle ?? null;
+                    $sectionHandle = $entry->section->handle ?? null;
                     $type = $entry->type->handle ?? null;
                     $collection = null;
                     $collections = null;
@@ -373,16 +373,16 @@ class Typesense extends Plugin
                         return;
                     }
 
-                    if ($sectionHande) {
+                    if ($sectionHandle) {
                         if ($type) {
-                            $section = $sectionHande . '.' . $type;
+                            $section = $sectionHandle . '.' . $type;
                         }
 
                         $collections = CollectionHelper::getCollectionBySection($section);
 
                         // get the generic type if specific doesn't exist
                         if (is_null($collections)) {
-                            $section = $sectionHande . '.all';
+                            $section = $sectionHandle . '.all';
                             $collections = CollectionHelper::getCollectionBySection($section);
                         }
 
@@ -394,6 +394,8 @@ class Typesense extends Plugin
                     }
 
                     if ($collections) {
+                        $upsertedCollections = [];
+
                         foreach ($collections as $collection) {
                             if (($entry->enabled && $entry->getEnabledForSite()) && $entry->getStatus() === 'live') {
                                 // element is enabled --> save to Typesense
@@ -405,6 +407,7 @@ class Typesense extends Plugin
 
                                         if ($resolver) {
                                             self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->upsert($resolver);
+                                            $upsertedCollections[] = $collection->indexName;
                                         }
                                     } catch (ObjectNotFound | ServerError $e) {
                                         Craft::$app->session->setFlash('error', Craft::t('typesense', 'There was an issue saving your action, check the logs for more info'));
@@ -417,6 +420,11 @@ class Typesense extends Plugin
                                     self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->delete(['filter_by' => 'id: ' . $id]);
                                 }
                             }
+                        }
+
+                        // After upserting, clean up document from other collections in the same section
+                        if (!empty($upsertedCollections) && $sectionHandle) {
+                            $this->_cleanupDocumentFromOtherCollections($id, $sectionHandle, $upsertedCollections);
                         }
                     }
                 }
@@ -473,5 +481,35 @@ class Typesense extends Plugin
                 'viteService' => $this->getVite(),
             ]);
         });
+    }
+
+    /**
+     * Clean up document from other collections that share the same section
+     * but were not upserted to (i.e., collections for different entry types)
+     */
+    private function _cleanupDocumentFromOtherCollections(int $documentId, string $sectionHandle, array $upsertedCollections): void
+    {
+        // Get all collections and filter by section handle
+        $allCollections = self::$plugin->getCollections()->getAllCollections();
+
+        if ($allCollections) {
+            foreach ($allCollections as $collection) {
+                // Check if this collection belongs to the same section
+                if (isset($collection->section) && str_starts_with($collection->section, $sectionHandle . '.')) {
+                    // Skip collections that we just upserted to
+                    if (!in_array($collection->indexName, $upsertedCollections)) {
+                        try {
+                            self::$plugin->getClient()->client()->collections[$collection->indexName]->documents->delete(['filter_by' => 'id: ' . $documentId]);
+                            Craft::info('Cleaned up document from collection due to type change: ' . $collection->indexName, __METHOD__);
+                        } catch (ObjectNotFound $e) {
+                            // Document doesn't exist in this collection, which is fine
+                            Craft::debug('Document not found in collection during cleanup: ' . $collection->indexName, __METHOD__);
+                        } catch (ServerError $e) {
+                            Craft::error('Failed to cleanup document from collection: ' . $e->getMessage(), __METHOD__);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
